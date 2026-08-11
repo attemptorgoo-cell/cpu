@@ -24,11 +24,14 @@ typedef struct packed {
 typedef struct packed {
     logic [31:0] pc_branch;
     logic branch_sign;
+    logic valid; 
 } ex_if_bus_t;  //t means type
 
 typedef struct packed {
     logic [31:0] instr;
     logic [31:0] pc;
+    logic valid; //8.11修改为vaild信号，更易于管理空指令
+
 } if_id_bus_t;  //t means type
 
 typedef struct packed {
@@ -56,6 +59,9 @@ typedef struct packed {
 
     logic is_jal;
     logic is_jalr;
+
+    logic valid; //8.11修改为vaild信号，更易于管理空指令
+
 } id_ex_bus_t;  //t means type
 
 typedef struct packed {
@@ -75,6 +81,8 @@ typedef struct packed {
     logic memory_re;
     logic [2:0] func3;
 
+
+    logic valid; //8.11修改为vaild信号，更易于管理空指令
 } ex_mem_bus_t;
 
 typedef struct packed {
@@ -87,6 +95,8 @@ typedef struct packed {
     logic [31:0] ram_data;
     logic memory_we;
     logic memory_re;
+
+    logic valid; //8.11修改为vaild信号，更易于管理空指令
 } mem_wb_bus_t;
 
 typedef struct packed {
@@ -94,6 +104,7 @@ typedef struct packed {
     logic [4:0] rd; 
     logic [31:0] w_data;
     logic we;
+    logic valid; //8.11修改为vaild信号，更易于管理空指令
 
 } wb_id_bus_t;
 
