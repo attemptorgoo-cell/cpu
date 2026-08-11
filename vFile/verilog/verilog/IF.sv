@@ -11,7 +11,8 @@ logic [31:0] rom [1023:0];
 
 initial begin
         // 你可以写一个 hex 文件，里面放你的机器码
-    $readmemh("D:/02_uncompleted/CPU_2026/verilog/inst_data.hex", rom);
+    $readmemh("D:/03_uncompleted/cpu/vFile/verilog/verilog/inst_data.hex", rom);
+    
     $display("DEBUG: ROM[0] = %h, ROM[1] = %h", rom[0], rom[1]);
     //只用正斜杠或者双反斜杠，绝对地址
 end

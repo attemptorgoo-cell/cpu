@@ -2,10 +2,10 @@ module test();
 logic clk,rst;
 
 initial begin
-    rst = 1'b1;
+    rst = 1'b0;
     clk = 1'b0;
 
-    #30 rst = 1'b0;
+    // #30 rst = 1'b0;   避免高阻态x的出现
     #50 rst = 1'b1;
     #500 $finish;
 end
