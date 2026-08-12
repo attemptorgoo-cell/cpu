@@ -16,17 +16,24 @@ logic [9:0] ram_index;         //1024个数据，从0到1023，1023是9位
 
 assign ram_index = addr[11:2];
 
-always_comb begin
+// always_comb begin
+//     if(memory_re)begin
+//         ram_data = ram[ram_index];
+//     end else begin
+//         ram_data = 32'b0;
+//     end
+// end
+
+always_ff@ (posedge clk)begin
     if(memory_re)begin
-        ram_data = ram[ram_index];
+        ram_data <= ram[ram_index];
     end else begin
-        ram_data = 32'b0;
+        ram_data <= 32'b0;
     end
 end
 
 always_ff@ (posedge clk)begin
     if(memory_we)begin
-
         case (func3)
             3'b010:          //sw
                 ram[ram_index]      <= w_ram_data;          
@@ -49,7 +56,6 @@ always_ff@ (posedge clk)begin
                     1'b1:
                     ram[ram_index][31:16] <= w_ram_data[15:0];  
                 endcase
-    
         endcase
 
 

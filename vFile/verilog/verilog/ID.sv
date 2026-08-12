@@ -7,6 +7,7 @@ module ID(
     input wb_id_bus_t wb_id_bus,                //接受写回阶段传回来的数据
 
     output id_ex_bus_t id_ex_bus
+
 );
 
 decode_out_t decode_out;
@@ -35,12 +36,10 @@ regFiles myRf(
 
 );
 
-
 always_comb begin : signal_assignment
     id_ex_bus = '0;
 
     if(if_id_bus.valid)begin
-
         id_ex_bus.valid     = if_id_bus.valid;
 
         id_ex_bus.pc        = if_id_bus.pc;
@@ -48,6 +47,7 @@ always_comb begin : signal_assignment
         id_ex_bus.is_branch = decode_out.is_branch;
         id_ex_bus.is_jal    = decode_out.is_jal;
         id_ex_bus.is_jalr   = decode_out.is_jalr;
+
 
         id_ex_bus.alu_op    = decode_out.alu_op;
         id_ex_bus.we        = decode_out.we;
@@ -65,7 +65,7 @@ always_comb begin : signal_assignment
         id_ex_bus.memory_we = decode_out.memory_we;
         id_ex_bus.memory_re = decode_out.memory_re;
         id_ex_bus.func3     = decode_out.func3;
-    
+
     end
 end
 endmodule

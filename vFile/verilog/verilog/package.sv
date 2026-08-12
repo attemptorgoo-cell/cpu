@@ -19,6 +19,8 @@ typedef struct packed {
 
     logic is_jal;
     logic is_jalr;
+
+
 } decode_out_t;  
 //使用t.rd的方式访问
 typedef struct packed {
@@ -62,6 +64,8 @@ typedef struct packed {
 
     logic valid; //8.11修改为vaild信号，更易于管理空指令
 
+
+
 } id_ex_bus_t;  //t means type
 
 typedef struct packed {
@@ -83,6 +87,7 @@ typedef struct packed {
 
 
     logic valid; //8.11修改为vaild信号，更易于管理空指令
+
 } ex_mem_bus_t;
 
 typedef struct packed {
@@ -97,6 +102,9 @@ typedef struct packed {
     logic memory_re;
 
     logic valid; //8.11修改为vaild信号，更易于管理空指令
+    
+    logic [31:0] addr;  
+    logic [2:0] func3;  
 } mem_wb_bus_t;
 
 typedef struct packed {

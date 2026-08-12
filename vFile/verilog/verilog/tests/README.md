@@ -1,6 +1,6 @@
 # RV32I directed regression tests
 
-These tests have been run in Vivado against the current five-stage CPU and confirmed by the user to print `All tests passed!`.
+Each archived test passed in Vivado when it was created. Tests 01–10 establish the earlier combinational-RAM baseline; Test 11 targets the synchronous-RAM Load-use change, and Test 12 is the current post-refactor consolidated regression. The user confirmed every run printed `All tests passed!`.
 
 The active simulation still reads `../inst_data.hex`. Files in `hex/` are immutable snapshots of passing programs, and matching files in `expected/` preserve the exact `check_regFile` and `check_memory` calls that passed. To rerun one manually, copy its hex contents into `inst_data.hex` and its `.svh` check block into the checking section of `test.sv`.
 
@@ -20,6 +20,8 @@ RAM expectations use the internal word-array index `ram[index]`, not a byte addr
 | `08_ram_byte_lane.hex` | All four SB lanes, both SH halves, LBU/LHU readback | `x5=11223344`, `x7=11223344`, `x8..x11=44,33,22,11`, `RAM[0]=RAM[1]=11223344` |
 | `09_jalr_edge.hex` | JALR bit-0 clearing, negative immediate, base forwarding, x0 protection | `x0=0`, `x2=0`, `x3=7`, `x4=9`, `x5=20`, `x7=44`, `x9=0`, `RAM[3]=42` |
 | `10_forwarding_stress.hex` | Newest-result priority, dual-source/store/load/branch forwarding | `x1=3`, `x2=6`, `x3=43`, `x5=44`, `x7=7`, `RAM[0]=0`, `RAM[4]=43` |
+| `11_sync_ram_load_use.hex` | Synchronous RAM and one-cycle Load-use stalls into ALU, Branch and Store | `x2=42`, `x3=43`, `x4=x5=x7=x8=85`, `x6=0`, `x9=170`, `RAM[0..2]=42,85,85`, `stall_count=4` |
+| `12_sync_memory_consolidated.hex` | Consolidated synchronous Load/Store widths, byte lanes, Load-use consumers and taken redirect | `x1=x2=80ff7f01`, `x19..x22=a1b25501`, `x23=7`, `RAM[0]=RAM[1]=a1b25501`, `RAM[2]=0`, `stall_count=10` |
 
 ## Detailed programs
 
@@ -79,3 +81,69 @@ Checks `(rs1 + imm) & ~1` with odd targets 33 and 49, including a negative immed
 ### 10 — Forwarding stress
 
 Performs three consecutive writes to x1 before consuming it twice, then combines Store address/data forwarding, immediate load-use forwarding, and a branch comparison using the newest value. RAM[0] is explicitly initialized before testing wrong-path Store suppression.
+
+### 11 — Synchronous RAM and Load-use stalls
+
+```assembly
+addi x1, x0, 42
+sw   x1, 0(x0)
+lw   x2, 0(x0)
+addi x3, x2, 1
+add  x4, x2, x3
+sw   x4, 4(x0)
+lw   x5, 4(x0)
+beq  x5, x4, target
+addi x6, x0, 99       # wrong path
+target: lw x7, 4(x0)
+sw   x7, 8(x0)
+lw   x8, 8(x0)
+add  x9, x8, x8
+jal  x0, 0
+```
+
+Confirms that synchronous RAM returns Load data in WB and that each immediate consumer stalls for exactly one cycle before using WB-to-EX forwarding. It covers Load-to-ALU, Load-to-Branch, Load-to-Store-data and a dual-source Load dependency. The taken branch also proves that the held instruction stream resumes without executing the wrong-path `addi`.
+
+### 12 — Consolidated synchronous memory regression
+
+```assembly
+lui  x1, 0x80ff8
+addi x1, x1, -255       # x1 = 80ff7f01
+sw   x1, 0(x0)
+
+lw   x2, 0(x0)
+addi x3, x2, 1
+lb   x4, 0(x0)
+addi x5, x4, 1
+lb   x6, 1(x0)
+addi x7, x6, 1
+lbu  x8, 2(x0)
+addi x9, x8, 1
+lb   x10, 3(x0)
+addi x11, x10, 1
+lh   x12, 0(x0)
+addi x13, x12, 1
+lhu  x14, 2(x0)
+addi x15, x14, 1
+
+addi x16, x0, 0x55
+sb   x16, 1(x0)
+addi x17, x0, 0x66
+sb   x17, 3(x0)
+lui  x18, 0xA
+addi x18, x18, 0x1b2    # x18 = 0000a1b2
+sh   x18, 2(x0)         # RAM[0] = a1b25501
+
+lw   x19, 0(x0)
+add  x20, x19, x0
+lw   x21, 0(x0)
+sw   x21, 4(x0)
+sw   x0, 8(x0)          # sentinel for wrong-path Store
+lw   x22, 4(x0)
+beq  x22, x19, target
+addi x23, x0, 99        # wrong path
+sw   x1, 8(x0)          # wrong path
+target: addi x23, x0, 7
+jal  x0, 0
+```
+
+This single regression replaces a manual rerun of the earlier memory-focused tests after the synchronous-RAM refactor. It checks LW/LB/LBU/LH/LHU formatting, SW/SB/SH lane writes, immediate Load consumers in ALU/Store/Branch paths, WB-to-EX forwarding, exactly ten one-cycle stalls, taken redirect, and preservation of the known-zero `RAM[2]` sentinel against a wrong-path Store.

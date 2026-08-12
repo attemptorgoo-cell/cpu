@@ -129,7 +129,7 @@ case(instr[6:0])
         decode_out.memory_re  = 1;
         decode_out.func3      = func3;
 
-
+        
 
 
     end

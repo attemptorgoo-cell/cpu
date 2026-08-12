@@ -52,6 +52,7 @@ always_comb begin :signal_assignment
         ex_mem_bus.memory_re     = id_ex_bus.memory_re;
         ex_mem_bus.func3         = id_ex_bus.func3;
 
+
     end
 end
 //数据旁路
@@ -88,12 +89,7 @@ always_comb begin : judge_branch_logic
     branch_sign = 1'b0;  // 你的中间变量也给个初值
 
     if(id_ex_bus.valid)begin
-
         ex_if_bus.valid  = id_ex_bus.valid;
-
-       
-        
-
 
         if(id_ex_bus.is_branch)begin
             case(id_ex_bus.func3)

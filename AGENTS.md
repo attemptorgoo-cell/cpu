@@ -1,5 +1,13 @@
 # CPU project collaboration rules
 
+## Project continuity
+
+- At the start of a new project conversation, read `md/README.md` and `md/STATUS.md` after this file. Read only the task-relevant architecture or daily documents; do not load the entire history by default.
+- Keep `md/STATUS.md` as the concise source of truth for the current baseline and next step.
+- At the end of a working day, add or update `md/daily/YYYY-MM-DD.md` with only the completed work, validation result, decisions, unresolved issues, and next first step.
+- Keep simulation evidence concise in project summaries, for example: `Test 12 passed; 10 expected stalls; archived.` Do not copy full Vivado console logs into the documentation.
+- Update `md/ARCHITECTURE.md` only for durable RTL structure changes and `md/ROADMAP.md` only when priorities or milestones change.
+
 ## RTL test maintenance
 
 - When RTL behavior is added or changed, Codex should create or update the directed machine-code program in `vFile/verilog/verilog/inst_data.hex`.
