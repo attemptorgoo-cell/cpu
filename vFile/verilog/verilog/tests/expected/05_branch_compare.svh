@@ -1,0 +1,9 @@
+check_regFile(0, 32'd0);
+check_regFile(1, 32'hffff_ffff);
+check_regFile(2, 32'd1);
+check_regFile(3, 32'd3);
+check_regFile(4, 32'd4);
+check_regFile(5, 32'd5);
+check_regFile(6, 32'd6);
+check_regFile(7, 32'd7);
+check_regFile(8, 32'd8);

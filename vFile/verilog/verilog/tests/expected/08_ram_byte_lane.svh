@@ -1,0 +1,16 @@
+check_regFile(0, 32'd0);
+check_regFile(1, 32'h1122_3344);
+check_regFile(2, 32'h0011_2233);
+check_regFile(3, 32'h0000_1122);
+check_regFile(4, 32'h0000_0011);
+check_regFile(5, 32'h1122_3344);
+check_regFile(6, 32'h0000_1122);
+check_regFile(7, 32'h1122_3344);
+check_regFile(8, 32'h0000_0044);
+check_regFile(9, 32'h0000_0033);
+check_regFile(10, 32'h0000_0022);
+check_regFile(11, 32'h0000_0011);
+check_regFile(12, 32'h0000_3344);
+check_regFile(13, 32'h0000_1122);
+check_memory(0, 32'h1122_3344);
+check_memory(1, 32'h1122_3344);
