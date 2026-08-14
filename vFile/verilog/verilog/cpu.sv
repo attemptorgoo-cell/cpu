@@ -107,8 +107,8 @@ always_comb begin : judgeStall
         id_ex_bus_reg.memory_re &&
         (id_ex_bus_reg.rd != 5'd0) &&
         (
-            (id_ex_bus.rs1 == id_ex_bus_reg.rd) ||
-            (id_ex_bus.rs2 == id_ex_bus_reg.rd)
+            ((id_ex_bus.rs1 == id_ex_bus_reg.rd) && id_ex_bus.use_rs1) ||
+            ((id_ex_bus.rs2 == id_ex_bus_reg.rd) && id_ex_bus.use_rs2)
         )
     )begin
         stall = 1'b1;

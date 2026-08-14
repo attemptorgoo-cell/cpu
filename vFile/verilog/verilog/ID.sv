@@ -66,6 +66,8 @@ always_comb begin : signal_assignment
         id_ex_bus.memory_re = decode_out.memory_re;
         id_ex_bus.func3     = decode_out.func3;
 
+        id_ex_bus.use_rs1   = decode_out.use_rs1;
+        id_ex_bus.use_rs2   = decode_out.use_rs2;
     end
 end
 endmodule

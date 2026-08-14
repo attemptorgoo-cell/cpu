@@ -1,12 +1,55 @@
+import my_riscv_pkg::*;
+
 module test();
 logic clk,rst;
 int error_count = 0;
 int unsigned stall_count = 0;
+logic [31:0] decode_probe_instr;
+decode_out_t decode_probe_out;
 
 cpu u_cpu (
     .clk(clk),
     .rst(rst) // 确保你的 cpu.sv 里的复位逻辑和这里对应
 );
+
+decoder decode_probe (
+    .clk(clk),
+    .instr(decode_probe_instr),
+    .decode_out(decode_probe_out)
+);
+
+task check_decode_use(
+input logic [31:0] instr,
+input logic expected_use_rs1,
+input logic expected_use_rs2,
+input string instruction_name
+);
+    begin
+        decode_probe_instr = instr;
+        #1;
+        if (
+            decode_probe_out.use_rs1 !== expected_use_rs1 ||
+            decode_probe_out.use_rs2 !== expected_use_rs2
+        ) begin
+            $error(
+                "Decode failed for %s: expected use_rs1/use_rs2=%0b/%0b, got %0b/%0b",
+                instruction_name,
+                expected_use_rs1,
+                expected_use_rs2,
+                decode_probe_out.use_rs1,
+                decode_probe_out.use_rs2
+            );
+            error_count++;
+        end else begin
+            $display(
+                "Decode passed for %s: use_rs1/use_rs2=%0b/%0b",
+                instruction_name,
+                decode_probe_out.use_rs1,
+                decode_probe_out.use_rs2
+            );
+        end
+    end
+endtask
 
 task check_regFile(
 input int unsigned index,
@@ -50,6 +93,7 @@ end
 initial begin
     rst = 1'b0;
     clk = 1'b0;
+    decode_probe_instr = 32'b0;
 
     #50 rst = 1'b1;
     #800

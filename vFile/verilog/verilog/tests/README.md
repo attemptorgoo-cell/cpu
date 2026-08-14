@@ -1,6 +1,6 @@
 # RV32I directed regression tests
 
-Each archived test passed in Vivado when it was created. Tests 01–10 establish the earlier combinational-RAM baseline; Test 11 targets the synchronous-RAM Load-use change, and Test 12 is the current post-refactor consolidated regression. The user confirmed every run printed `All tests passed!`.
+Each archived test passed in Vivado when it was created. Tests 01–10 establish the earlier combinational-RAM baseline; Test 11 targets the synchronous-RAM Load-use change, Test 12 is the post-refactor consolidated regression, and Test 13 verifies explicit `use_rs1/use_rs2` decode metadata plus Load-use hazard gating. The user confirmed every run printed `All tests passed!`. After Test 13 passed, the active simulation was restored to Test 12 for the final consolidated regression.
 
 The active simulation still reads `../inst_data.hex`. Files in `hex/` are immutable snapshots of passing programs, and matching files in `expected/` preserve the exact `check_regFile` and `check_memory` calls that passed. To rerun one manually, copy its hex contents into `inst_data.hex` and its `.svh` check block into the checking section of `test.sv`.
 
@@ -22,6 +22,7 @@ RAM expectations use the internal word-array index `ram[index]`, not a byte addr
 | `10_forwarding_stress.hex` | Newest-result priority, dual-source/store/load/branch forwarding | `x1=3`, `x2=6`, `x3=43`, `x5=44`, `x7=7`, `RAM[0]=0`, `RAM[4]=43` |
 | `11_sync_ram_load_use.hex` | Synchronous RAM and one-cycle Load-use stalls into ALU, Branch and Store | `x2=42`, `x3=43`, `x4=x5=x7=x8=85`, `x6=0`, `x9=170`, `RAM[0..2]=42,85,85`, `stall_count=4` |
 | `12_sync_memory_consolidated.hex` | Consolidated synchronous Load/Store widths, byte lanes, Load-use consumers and taken redirect | `x1=x2=80ff7f01`, `x19..x22=a1b25501`, `x23=7`, `RAM[0]=RAM[1]=a1b25501`, `RAM[2]=0`, `stall_count=10` |
+| `13_use_rs_decode_and_hazard.hex` | Decoder `use_rs1/use_rs2` matrix, unused-field false collisions, and true Load-use dependencies through rs1/rs2 | `x1=x5=x8=x10=x11=x12=42`, `x6=5`, `x7=00028000`, `x9=43`, `RAM[0]=RAM[1]=42`, `stall_count=3` |
 
 ## Detailed programs
 
@@ -147,3 +148,29 @@ jal  x0, 0
 ```
 
 This single regression replaces a manual rerun of the earlier memory-focused tests after the synchronous-RAM refactor. It checks LW/LB/LBU/LH/LHU formatting, SW/SB/SH lane writes, immediate Load consumers in ALU/Store/Branch paths, WB-to-EX forwarding, exactly ten one-cycle stalls, taken redirect, and preservation of the known-zero `RAM[2]` sentinel against a wrong-path Store.
+
+### 13 — Explicit source-use decode and hazard gating
+
+```assembly
+addi x1,  x0, 42
+sw   x1,  0(x0)
+
+lw   x5,  0(x0)
+addi x6,  x0, 5       # raw instr[24:20]=5, but OP-IMM does not use rs2
+
+lw   x5,  0(x0)
+lui  x7,  0x28        # raw instr[19:15]=5, but LUI uses no GPR source
+
+lw   x8,  0(x0)
+addi x9,  x8, 1       # true rs1 dependency
+
+lw   x10, 0(x0)
+add  x11, x0, x10     # true R-type rs2 dependency
+
+lw   x12, 0(x0)
+sw   x12, 4(x0)       # true Store-data rs2 dependency
+
+jal  x0, 0
+```
+
+The testbench also probes one representative encoding for each supported opcode class: JAL and U-type instructions produce `0/0`; JALR, Load and OP-IMM produce `1/0`; Branch, Store and OP produce `1/1`; an unknown opcode defaults to `0/0`. The two raw-field collisions must not add stalls, while the three real dependencies must each add exactly one stall. Vivado passed every decoder and architectural check with `stall_count=3`.

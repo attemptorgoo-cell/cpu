@@ -14,6 +14,7 @@ logic [31:0] offset_Stype;
 logic [31:0] offset_Btype;
 logic [31:0] offset_jal;
 logic [31:0] offset_jalr;
+
 assign func3 = instr[14:12];
 assign func7 = instr[31:25];
 
@@ -51,6 +52,7 @@ case(instr[6:0])
 
         decode_out.we  = 1'b1;
 
+        decode_out.use_rs1 = 1'b1;
     end
 
 //-------------------------------------------------------------------------------------------
@@ -66,6 +68,9 @@ case(instr[6:0])
         
         decode_out.is_branch = 1'b1;
         decode_out.func3     = func3;
+
+        decode_out.use_rs1 = 1'b1;
+        decode_out.use_rs2 = 1'b1;
     end
 
 
@@ -113,6 +118,9 @@ case(instr[6:0])
         decode_out.memory_re  = 0;
         decode_out.memory_we  = 1;
         decode_out.func3      = func3;
+
+        decode_out.use_rs1 = 1'b1;
+        decode_out.use_rs2 = 1'b1;
     end
     7'b0000011:begin
 //-------------------------------------------------------------------------------------------
@@ -129,7 +137,7 @@ case(instr[6:0])
         decode_out.memory_re  = 1;
         decode_out.func3      = func3;
 
-        
+        decode_out.use_rs1 = 1'b1;
 
 
     end
@@ -141,8 +149,10 @@ case(instr[6:0])
         decode_out.we  = 1'b1;
 
 
-        decode_out.imm_we = 1'b1;
-        decode_out.imm    = imm;
+        decode_out.imm_we  = 1'b1;
+        decode_out.imm     = imm;
+        decode_out.use_rs1 = 1'b1;
+ 
     case(func3) 
         3'b000:
             decode_out.alu_op = 4'b0000;   //"ADDI"
@@ -178,7 +188,10 @@ case(instr[6:0])
     decode_out.rs2 = instr[24:20];
     decode_out.rd  = instr[11:7];
     decode_out.we  = 1'b1;
-    
+
+    decode_out.use_rs1 = 1'b1;
+    decode_out.use_rs2 = 1'b1;
+
     case({func7,func3})
         10'b0000000_000:
             decode_out.alu_op = 4'b0000;//"ADD"

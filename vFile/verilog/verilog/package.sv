@@ -20,7 +20,8 @@ typedef struct packed {
     logic is_jal;
     logic is_jalr;
 
-
+    logic use_rs1;
+    logic use_rs2;
 } decode_out_t;  
 //使用t.rd的方式访问
 typedef struct packed {
@@ -64,8 +65,8 @@ typedef struct packed {
 
     logic valid; //8.11修改为vaild信号，更易于管理空指令
 
-
-
+    logic use_rs1;
+    logic use_rs2;
 } id_ex_bus_t;  //t means type
 
 typedef struct packed {

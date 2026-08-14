@@ -17,6 +17,7 @@
 | [PROJECT.md](PROJECT.md) | 项目定位、目标与范围 | 项目方向改变时 |
 | [STATUS.md](STATUS.md) | 当前可信基线、限制、下一步 | 每个工作日结束或里程碑完成时 |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | 当前 RTL 结构、控制和数据通路 | RTL 架构改变时 |
+| [RV32I_INSTRUCTIONS.md](RV32I_INSTRUCTIONS.md) | RV32I 编码、语义、源操作数使用级与当前实现矩阵 | ISA 覆盖或相关微架构契约改变时 |
 | [ROADMAP.md](ROADMAP.md) | 近期任务和长期阶段 | 优先级或阶段改变时 |
 | [XIANGSHAN.md](XIANGSHAN.md) | 当前小核到香山的机制映射 | 开始或完成一个新机制时 |
 | [WORKFLOW.md](WORKFLOW.md) | 每日对话、验证和归档方法 | 工作方式改变时 |
