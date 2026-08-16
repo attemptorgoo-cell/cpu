@@ -7,8 +7,10 @@ module MEM(
     output mem_wb_bus_t  mem_wb_bus,
 
 
+
     output mem_ex_bus_t  mem_ex_bus,    //数据旁路
-    output logic [31:0] ram_data_out
+    output logic [31:0] ram_data_out,
+    input wb_ex_bus_t wb_mem_bus
 );
 
 logic [31:0] addr;
@@ -43,10 +45,13 @@ always_comb begin : ram_data_assignment //传递ram的数据
 
     if(ex_mem_bus.valid)begin       
         addr = (ex_mem_bus.memory_we || ex_mem_bus.memory_re) ? ex_mem_bus.w_data : 32'b0;
-        if(ex_mem_bus.memory_we) w_ram_data = ex_mem_bus.src2_data;
+
+        w_ram_data = (ex_mem_bus.memory_we && (wb_mem_bus.valid && wb_mem_bus.memory_re
+        && wb_mem_bus.rd != 5'b0 && wb_mem_bus.rd == ex_mem_bus.rs2) ) ? wb_mem_bus.w_data: //判断晚旁路，是否l-s
+                      ex_mem_bus.memory_we ? ex_mem_bus.src2_data : 32'b0;
     end
 end
-    
+
 always_comb begin : signal_assignment
     mem_wb_bus = '0;
     if(ex_mem_bus.valid)begin

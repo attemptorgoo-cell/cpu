@@ -344,9 +344,9 @@ RV32I 一共是 40 条，而不是 37+若干伪指令：
 
 ## 6. 每条指令的源操作数使用级
 
-ISA 只规定指令语义，不规定 EX/MEM/WB 等流水级。下表中的“当前需求级”描述当前 RTL 在哪里选择或消费最新 GPR 值；“晚旁路目标”则描述加入 WB→MEM Store-data 旁路后，可以把 Store 数据的最终选择推迟到哪里。寄存器堆物理读取发生在 ID，与这两个概念也不是一回事。
+ISA 只规定指令语义，不规定 EX/MEM/WB 等流水级。下表区分当前 RTL 在 EX 锁存的候选值与真正产生功能副作用前的最终选择；寄存器堆物理读取发生在 ID，与这两个概念也不是一回事。当前 RTL 已加入 WB→MEM Store-data 晚旁路。
 
-| 指令族 | `use1` | `rs1` 用途/当前需求 | `use2` | `rs2` 用途/当前需求 | 晚旁路目标 | rd 结果最早可用 | 数据 RAM/redirect |
+| 指令族 | `use1` | `rs1` 用途/当前需求 | `use2` | `rs2` 用途/EX 候选 | 最终选择 | rd 结果最早可用 | 数据 RAM/redirect |
 |---|---:|---|---:|---|---|---|---|
 | LUI | 0 | — | 0 | — | — | U-imm，EX 末 | — |
 | AUIPC | 0 | —，另用本条 PC | 0 | — | — | PC+U-imm，EX 末 | — |
@@ -362,7 +362,7 @@ ISA 只规定指令语义，不规定 EX/MEM/WB 等流水级。下表中的“�
 
 Load 数据在 MEM→WB 时钟边沿之后进入 RAM 输出，并在该 WB 周期内完成宽度选择与符号/零扩展；它不是等到 WB 周期末才可用。
 
-Store.rs2 的 ISA 语义是“最终写入内存的数据”，而不是 ISA 规定它必须在哪一级读取。当前 RTL 在 EX 就选择并锁存 `S_type_src2_data`；晚旁路目标是在 MEM 写 RAM 前做最后选择。当前实现仍把 Store-data 的最新值需求提前到了 EX，因此 Load→Store-data 仍会停一拍。
+Store.rs2 的 ISA 语义是“最终写入内存的数据”，而不是 ISA 规定它必须在哪一级读取。当前 RTL 在 EX 先选择并锁存 `S_type_src2_data`，在 MEM 写 RAM 前再检查同拍 WB 是否存在匹配的 Load 结果；匹配时由 WB 数据覆盖 EX 候选。因此纯 Load→Store-data 不再停顿，Store 地址相关仍需停一拍。
 
 ## 7. 冒险、旁路与 Store-data 晚旁路
 
@@ -384,7 +384,7 @@ Load-use stall 还必须确认生产者确实是尚未能提供结果的 Load。
 
 ### 7.2 不同 Load 相关的处理
 
-| Load.rd 与紧邻下一条匹配的位置 | 值首次需要 | 当前 RTL | 加 WB→MEM 晚旁路后 |
+| Load.rd 与紧邻下一条匹配的位置 | 值首次需要 | 旧实现 | 当前 RTL（WB→MEM） |
 |---|---|---|---|
 | 任意合法 `rs1` | EX | 1 stall | 仍 1 stall |
 | OP/Branch 的 `rs2` | EX | 1 stall | 仍 1 stall |
@@ -492,8 +492,7 @@ addr 3 -> 0x11
 6. OP 未命中合法 `{funct7,funct3}` 时，可能误用默认 ADD 并写 rd，例如 MUL 编码可能被当成 ADD；
 7. 没有非法指令、指令地址错位、Load/Store 地址错位或访问异常；
 8. ROM/RAM 只使用低地址索引，高地址会别名；
-9. Store.rs2 当前在 EX 提前选值，尚无 WB→MEM 晚旁路；
-10. 当前 RTL 信号叫 `use_rs1/use_rs2`，项目文档旧措辞常写 `uses_rs1/uses_rs2`，后续宜统一命名。
+9. 当前 RTL 信号叫 `use_rs1/use_rs2`，项目文档旧措辞常写 `uses_rs1/uses_rs2`，后续宜统一命名。
 
 RV32I 非特权规范把保留指令编码的行为留给平台/执行环境决定，并不无条件要求所有保留 opcode 都产生 illegal-instruction。为了让本项目行为可预测，同时防止未知编码静默产生副作用，建议为**本核支持的 ISA 配置**明确采用以下策略：
 

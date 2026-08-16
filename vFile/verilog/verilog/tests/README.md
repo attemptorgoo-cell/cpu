@@ -1,8 +1,8 @@
 # RV32I directed regression tests
 
-Each archived test passed in Vivado when it was created. Tests 01–10 establish the earlier combinational-RAM baseline; Test 11 targets the synchronous-RAM Load-use change, Test 12 is the post-refactor consolidated regression, and Test 13 verifies explicit `use_rs1/use_rs2` decode metadata plus Load-use hazard gating. The user confirmed every run printed `All tests passed!`. After Test 13 passed, the active simulation was restored to Test 12 for the final consolidated regression.
+Each archived test passed in Vivado when it was created. Tests 01–10 establish the earlier combinational-RAM baseline; Test 11 targets synchronous-RAM Load-use behavior; Test 12 is the pre-late-forwarding consolidated baseline; Test 13 verifies explicit `use_rs1/use_rs2`; Tests 14–15 verify WB-to-MEM Store-data forwarding, including identity and zero-data edge cases; and Test 16 is the post-forwarding consolidated baseline. The user confirmed every archived run printed `All tests passed!`.
 
-The active simulation still reads `../inst_data.hex`. Files in `hex/` are immutable snapshots of passing programs, and matching files in `expected/` preserve the exact `check_regFile` and `check_memory` calls that passed. To rerun one manually, copy its hex contents into `inst_data.hex` and its `.svh` check block into the checking section of `test.sv`.
+The active simulation loads `inst_data.hex`. Files in `hex/` are immutable snapshots of passing programs, and matching files in `expected/` preserve the exact `check_regFile` and `check_memory` calls that passed. To rerun one manually, copy its hex contents into `inst_data.hex` and its `.svh` check block into the checking section of `test.sv`.
 
 RAM expectations use the internal word-array index `ram[index]`, not a byte address.
 
@@ -23,6 +23,9 @@ RAM expectations use the internal word-array index `ram[index]`, not a byte addr
 | `11_sync_ram_load_use.hex` | Synchronous RAM and one-cycle Load-use stalls into ALU, Branch and Store | `x2=42`, `x3=43`, `x4=x5=x7=x8=85`, `x6=0`, `x9=170`, `RAM[0..2]=42,85,85`, `stall_count=4` |
 | `12_sync_memory_consolidated.hex` | Consolidated synchronous Load/Store widths, byte lanes, Load-use consumers and taken redirect | `x1=x2=80ff7f01`, `x19..x22=a1b25501`, `x23=7`, `RAM[0]=RAM[1]=a1b25501`, `RAM[2]=0`, `stall_count=10` |
 | `13_use_rs_decode_and_hazard.hex` | Decoder `use_rs1/use_rs2` matrix, unused-field false collisions, and true Load-use dependencies through rs1/rs2 | `x1=x5=x8=x10=x11=x12=42`, `x6=5`, `x7=00028000`, `x9=43`, `RAM[0]=RAM[1]=42`, `stall_count=3` |
+| `14_load_store_data_forwarding.hex` | Pure Store-data, Store-address, and dual Load dependencies after adding WB-to-MEM forwarding | `x1=x5=42`, `x2=x6=8`, `x3=x7=12`, `RAM[0..2]=42`, `RAM[3..4]=12`, `stall_count=2`, six Store commits |
+| `15_late_store_forwarding_edges.hex` | WB-to-MEM forwarding identity and zero-data edge cases | `x1=x5=7`, `x2=42`, `x6=0`, `RAM[0]=7`, `RAM[1]=42`, `RAM[2]=RAM[3]=0`, `stall_count=0`, four Store commits |
+| `16_post_late_forwarding_consolidated.hex` | Full synchronous-memory regression after WB-to-MEM Store-data forwarding | Same architectural state as Test 12, with `stall_count=9` |
 
 ## Detailed programs
 
@@ -174,3 +177,63 @@ jal  x0, 0
 ```
 
 The testbench also probes one representative encoding for each supported opcode class: JAL and U-type instructions produce `0/0`; JALR, Load and OP-IMM produce `1/0`; Branch, Store and OP produce `1/1`; an unknown opcode defaults to `0/0`. The two raw-field collisions must not add stalls, while the three real dependencies must each add exactly one stall. Vivado passed every decoder and architectural check with `stall_count=3`.
+
+### 14 — Load-to-Store-data late forwarding
+
+```assembly
+addi x1, x0, 42
+sw   x1, 0(x0)
+addi x2, x0, 8
+sw   x2, 8(x0)
+addi x3, x0, 12
+sw   x3, 12(x0)
+
+lw   x5, 0(x0)
+sw   x5, 4(x0)       # Store.rs2-only dependency: 0 stall
+
+lw   x6, 8(x0)
+sw   x1, 0(x6)       # Store.rs1 address dependency: 1 stall
+
+lw   x7, 12(x0)
+sw   x7, 4(x7)       # Store.rs1 and rs2 dependency: 1 stall
+
+jal  x0, 0
+```
+
+Vivado passed all architectural checks with exactly two address-driven stalls and six Store commits. This test established the main timing cases, but it did not distinguish forwarding identity from forwarding data value; Test 15 was added immediately afterward to cover unrelated nonzero Load data and a required zero-valued forward.
+
+### 15 — Late Store-data forwarding identity and zero value
+
+```assembly
+addi x1, x0, 7
+sw   x1, 0(x0)
+
+addi x2, x0, 42
+lw   x5, 0(x0)
+sw   x2, 4(x0)       # unrelated nonzero Load must not replace Store.rs2
+
+sw   x0, 8(x0)       # explicit zero source
+addi x6, x0, 99
+lw   x6, 8(x0)
+sw   x6, 12(x0)      # matching zero-valued Load must still be forwarded
+
+jal  x0, 0
+```
+
+Vivado passed with zero stalls and exactly four Store commits. The first case proves that forwarding is selected by matching WB.rd to Store.rs2 rather than by observing a nonzero value. The second proves that zero is a valid forwarded Load result.
+
+### 16 — Post-late-forwarding consolidated regression
+
+The machine program and architectural expectations are identical to Test 12. Its key late-forwarding sequence is:
+
+```assembly
+lw   x19, 0(x0)
+add  x20, x19, x0     # EX consumer: still stalls once
+lw   x21, 0(x0)
+sw   x21, 4(x0)       # Store-data-only consumer: now zero stalls
+sw   x0, 8(x0)        # sentinel for wrong-path Store
+lw   x22, 4(x0)
+beq  x22, x19, target
+```
+
+Vivado preserved every register and RAM expectation from Test 12 and reported exactly nine Load-use stalls instead of ten. The only removed stall is the pure `Load.rd -> Store.rs2` dependency; Load consumers that need their value in EX still stall once.

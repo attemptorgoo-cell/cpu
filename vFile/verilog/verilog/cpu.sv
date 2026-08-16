@@ -20,6 +20,7 @@ ex_if_bus_t ex_if_bus;
 logic branch_sign;
 
 logic [31:0] ram_data_loadType;
+
 //同步ram
 logic stall;
 
@@ -56,7 +57,8 @@ MEM myMEM(
 .ex_mem_bus(ex_mem_bus_reg),
 .mem_wb_bus(mem_wb_bus),
 .mem_ex_bus(mem_ex_bus),     //数据旁路
-.ram_data_out(ram_data_loadType)
+.ram_data_out(ram_data_loadType),
+.wb_mem_bus(wb_ex_bus)
 );
 
 WB myWB(
@@ -66,7 +68,8 @@ WB myWB(
 .wb_id_bus(wb_id_bus),
 .wb_ex_bus(wb_ex_bus),       //数据旁路
 //减少长路径
-.ram_data(ram_data_loadType)
+.ram_data_in(ram_data_loadType)
+
 );
 
 always_ff @(posedge clk or negedge rst)begin
@@ -94,7 +97,6 @@ always_ff @(posedge clk or negedge rst)begin
         if(stall)begin
             if_id_bus_reg  <= if_id_bus_reg;
             id_ex_bus_reg  <= '0;
-            
         end
     end
 end
@@ -108,7 +110,7 @@ always_comb begin : judgeStall
         (id_ex_bus_reg.rd != 5'd0) &&
         (
             ((id_ex_bus.rs1 == id_ex_bus_reg.rd) && id_ex_bus.use_rs1) ||
-            ((id_ex_bus.rs2 == id_ex_bus_reg.rd) && id_ex_bus.use_rs2)
+            (((id_ex_bus.rs2 == id_ex_bus_reg.rd) && id_ex_bus.use_rs2) && (!id_ex_bus.memory_we))
         )
     )begin
         stall = 1'b1;

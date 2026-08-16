@@ -4,6 +4,7 @@ module test();
 logic clk,rst;
 int error_count = 0;
 int unsigned stall_count = 0;
+int unsigned store_commit_count = 0;
 logic [31:0] decode_probe_instr;
 decode_out_t decode_probe_out;
 
@@ -90,6 +91,14 @@ always_ff @(posedge clk or negedge rst) begin
     end
 end
 
+always_ff @(posedge clk or negedge rst) begin
+    if (!rst) begin
+        store_commit_count <= 0;
+    end else if (u_cpu.ex_mem_bus_reg.valid && u_cpu.ex_mem_bus_reg.memory_we) begin
+        store_commit_count <= store_commit_count + 1;
+    end
+end
+
 initial begin
     rst = 1'b0;
     clk = 1'b0;
@@ -98,9 +107,9 @@ initial begin
     #50 rst = 1'b1;
     #800
 
-    // Consolidated synchronous-memory regression:
-    // all Load widths/extensions, Store widths/lanes, Load-use consumers,
-    // WB-to-EX forwarding, taken-branch flush and wrong-path Store suppression.
+    // Test 16: post-late-forwarding consolidated synchronous-memory regression.
+    // Covers all Load widths/extensions, Store widths/lanes, Load-use consumers,
+    // WB-to-MEM Store-data forwarding, taken redirect and wrong-path Store suppression.
     check_regFile(0, 32'd0);
     check_regFile(1, 32'h80ff7f01);
     check_regFile(2, 32'h80ff7f01);
@@ -127,11 +136,11 @@ initial begin
     check_memory(1, 32'ha1b25501);
     check_memory(2, 32'd0);
 
-    if (stall_count !== 10) begin
-        $error("Test failed: consolidated regression expected exactly 10 load-use stalls, got %0d", stall_count);
+    if (stall_count !== 9) begin
+        $error("Test failed: consolidated regression expected exactly 9 load-use stalls after late Store-data forwarding, got %0d", stall_count);
         error_count++;
     end else begin
-        $display("Test passed: consolidated regression observed exactly 10 load-use stalls");
+        $display("Test passed: consolidated regression observed exactly 9 load-use stalls after late Store-data forwarding");
     end
 
     if (error_count == 0) begin

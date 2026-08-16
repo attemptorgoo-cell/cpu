@@ -17,6 +17,28 @@
 - 一个测试聚焦一个新行为；大改后再运行一份综合回归。
 - Vivado 日志在对话中只需概括为“测试名、通过/失败、关键计数”。完整终端输出不写入每日记录。
 
+## 当前 Vivado 仿真方式
+
+当前阶段优先使用 Vivado GUI 的 **Run Behavioral Simulation**：
+
+```text
+点击 Run Behavioral Simulation
+-> Vivado 编译 SystemVerilog
+-> elaboration 建立 test 顶层模型
+-> 启动 XSim
+-> test.sv 自动检查寄存器、RAM 和 stall
+-> 控制台打印 PASS/FAIL
+```
+
+对于“一个活动测试、点击一次即可得到自检结果”的当前工作流，GUI 已经足够直接，不要求额外使用 Tcl。Tcl 自动化推迟到确实需要以下能力时再做：
+
+- 一次自动运行 Test 01–16 等多组归档测试；
+- 避免反复替换 hex 和预期检查；
+- 在命令行或 CI 中无人值守运行；
+- 让另一台电脑复现同一批处理流程。
+
+Tcl 负责自动组织测试流程，不替代 `test.sv` 中的功能检查。
+
 ## 测试完成
 
 测试归档的具体约束以根目录 `AGENTS.md` 为准。简化流程为：
